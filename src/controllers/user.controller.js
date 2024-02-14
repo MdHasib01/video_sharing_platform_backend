@@ -8,12 +8,14 @@ const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, username, password } = req.body;
   console.log("email:", email);
 
+  //Checking if any field is empty
   if (
     [fullName, email, username, password].some((field) => field?.trim() === "")
   ) {
     throw new ApiError(400, "All fields are required");
   }
 
+  //Checking if user and email are already in the database or not
   const existedUser = User.findOne({
     $or: [{ username }, { email }],
   });
@@ -21,6 +23,8 @@ const registerUser = asyncHandler(async (req, res) => {
   if (existedUser) {
     throw new ApiError(409, "User with email or username already exist");
   }
+
+  //Checking if the files uploaded in the server or not
   const avatarLocalPath = req.files?.avatar[0]?.path;
   const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
@@ -28,13 +32,16 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "avatar file is required");
   }
 
+  //Uploading the files on cloudinaryt
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
+  //checking if the file uploaded on cloudeinary or not
   if (!avatar) {
     throw new ApiError(400, "avatar file is required");
   }
 
+  //Creating user
  const user = await User.create({
    fullName,
    avatar: avatar.url,
@@ -44,6 +51,7 @@ const registerUser = asyncHandler(async (req, res) => {
    username: username.toLowercase(),
  });
 
+ //Taking out some data for safety from the frontend response
  const createdUser = await User.findById(user._id).select(
    "-password -refreshToken"
  );
